@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans
+						http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+						http://www.springframework.org/schema/context
+						http://www.springframework.org/schema/context/spring-context-3.0.xsd">
+	 
+	 <!-- ※ dispatcher-servlet.xml 의 기본 샘플 코드 -->
+	 <!--    이 코드는 기본 설정 템플릿을 복사하기 위해 스프링 docs 를 참고하여 작성한다. -->
+	 <!--    → 『C:\Downloads\s-f-3.0.2.-with-docs\docs\spring-framework-reference\pdf』 경로로 이동 -->
+	 <!-- 	 → 『spring-framework-reference.pdf』 파일 실행-->
+	 <!-- 	 → 문서 본문 내용의 425페이지 (직접이동 450/805) 이동 -->
+	 <!-- 	 → 해당 페이지 하단의 사각형 XML 파일 샘플코드 복사 & 붙여넣기 -->
+	 <!-- ※ Annotation 을 활용하여 Controller 객체 등록 -->
+	 <!--    → Annotation 을 활용하여 작성된 Controller 객체를 -->
+	 <!--       스프링 컨테이너가 자동으로 스캔하여 찾아낼수 있도록 처리 -->
+	 
+	 <!-- ① 기존 코드 -->
+	<context:component-scan base-package="com.test.prj" />
+	<!-- → 『base-package』 속성의 속성값으로 Controller 객체가 포함된 패키지 경로 지정 -->
+	
+	<!-- ③ mybatis 등록 과정에서 생겨나는 추가 코드2 -->
+	<!-- → ② 를 수행하는 과정에서 필요한 dataSource를 사용할 수 있도록 하기 위한 설정
+	        → 『SimpleDriverDataSource -->
+	<bean id="localDataSource" class="org.springframework.jdbc.datasource.SimpleDriverDataSource">
+		<property name="driverClass" value="oracle.jdbc.driver.OracleDriver"></property>
+		<property name="url" value="jdbc:oracle:thin:@211.238.142.172:1521:xe"></property>
+		<property name="username" value="scott"></property>
+		<property name="password" value="tiger"></property>
+	</bean>
+	
+	
+	<!-- ② mybatis 등록 과정에서 생겨나는 추가 코드 1  -->
+	<!--    → mybatis 를 사용하기 위한 환경설정 추가 -->
+	<!--       → 『SqlSessionFactoryBean』 등록 -->
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<!-- ④ dataSource 를 등록하고 와서 다시 추가 -->
+		<property name="dataSource" ref="localDataSource"></property>
+		<!-- ⑤ 매퍼 파일 등록 → 매퍼 파일의 위치 및 형식 전달 -->
+		<property name="mapperLocations" value="classpath:com/test/prj/mapper/*.xml "></property>
+	</bean>
+	
+	<!-- ⑥ mybatis 등록과정에서 생겨나는 추가코드 3 -->
+	<!--    → sqlSession 을 사용하기 위한 환경 설정 추가 -->
+	<!--       → 『sqlSessionTemplate』 -->
+	<bean id="sqlSession" class="org.mybatis.spring.SqlSessionTemplate">
+		<constructor-arg index="0" ref="sqlSessionFactory"></constructor-arg>
+		<!-- 생성자를 통해 주입하겠다 -->
+		<!-- 0번째 생성자에게 ref에 해당하는 객체를 넘기는 형태로 사용하겠다. -->
+	</bean>
+</beans>

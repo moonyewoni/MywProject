@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+ "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.test.prj.IGalleryDAO">
+
+	<select id="galleryList" resultType="com.test.prj.GalleryDTO">
+		SELECT GL.ID AS GALLERY_ID, GL.MOMENT_ID AS MOMENT_ID, GL.PARTICIPANT_ID AS PARTICIPANT_ID
+			 , UI.NAME AS PARTICIPANT_NAME, GL.FILE_REALNAME AS FILE_REALNAME
+			 , GL.FILE_SETTINGNAME AS FILE_SETTINGNAME
+			 , GL.ROOT AS ROOT, GL.UPLOAD_DATE AS UPLOAD_DATE
+		FROM GALLERY GL LEFT JOIN MM_PARTICIPANT MT
+		     ON GL.PARTICIPANT_ID = MT.ID
+		     LEFT JOIN GR_MATCH GM
+		     ON MT.MEMBER_ID = GM.ID
+		     LEFT JOIN US_INFORMATION UI
+		     ON GM.USER_ID = UI.USER_ID
+		WHERE GL.MOMENT_ID = #{moment_id}
+		ORDER BY GL.UPLOAD_DATE DESC
+	</select>
+	
+	<select id="getMomentName" resultType="com.test.prj.GalleryDTO">
+		SELECT DISTINCT(MM.NAME) AS MOMENT_NAME
+		FROM GALLERY GL LEFT JOIN MOMENT MM
+		     ON GL.MOMENT_ID = MM.ID
+		WHERE GL.MOMENT_ID = #{moment_id}
+	</select>
+	
+	<select id="galleryCount" resultType="java.lang.Integer">
+		SELECT COUNT(*) AS COUNT
+		FROM GALLERY
+	</select>
+	
+	<select id="searchMemberId" resultType="java.lang.String">
+		SELECT GM.ID AS MEMBER_ID
+		FROM GR_MATCH GM LEFT JOIN TBL_GROUP GR
+		    ON GR.ID = GM.GROUP_ID
+		    LEFT JOIN TBL_USER US
+		    ON US.ID = GM.USER_ID
+		WHERE US.ID = #{user_id}
+		  AND GR.ID = #{group_id}
+		  AND GM.ID NOT IN (SELECT MEMBER_ID
+                 			FROM GR_MEMBER_QUIT)
+	</select>
+	
+	<select id="getPartiId" resultType="java.lang.String">
+		SELECT ID AS PARTICIPANT_ID
+		FROM MM_PARTICIPANT MT
+		WHERE MEMBER_ID = #{member_id}
+		  AND MOMENT_ID = #{moment_id}
+		  AND (SELECT COUNT(*)
+               FROM MM_QUIT
+               WHERE QITER_ID = MT.ID) = 0
+          AND MT.MOMENT_ID NOT IN (SELECT MOMENT_ID
+                  	 	    	   FROM MM_NONACTIVE)
+	</select>
+	
+	<insert id="addGallery">
+		INSERT INTO GALLERY(ID, MOMENT_ID, PARTICIPANT_ID, FILE_REALNAME, FILE_SETTINGNAME, ROOT, UPLOAD_DATE)
+		VALUES('GL0' || GALLERYSEQ.NEXTVAL, #{moment_id}, #{participant_id}, #{file_realname}, #{file_settingname}, #{root}, SYSDATE)
+	</insert>
+	
+	<select id="myGalleryList" resultType="com.test.prj.GalleryDTO">
+		SELECT GL.ID AS GALLERY_ID, GL.MOMENT_ID AS MOMENT_ID, GL.PARTICIPANT_ID AS PARTICIPANT_ID
+			 , UI.NAME AS PARTICIPANT_NAME, GL.FILE_REALNAME AS FILE_REALNAME
+			 , GL.FILE_SETTINGNAME AS FILE_SETTINGNAME
+			 , GL.ROOT AS ROOT
+			 , TO_CHAR(GL.UPLOAD_DATE, 'YYYY-MM-DD HH24:MI:SS') AS UPLOAD_DATE
+		FROM GALLERY GL LEFT JOIN MM_PARTICIPANT MT
+		     ON GL.PARTICIPANT_ID = MT.ID
+		     LEFT JOIN GR_MATCH GM
+		     ON MT.MEMBER_ID = GM.ID
+		     LEFT JOIN US_INFORMATION UI
+		     ON GM.USER_ID = UI.USER_ID
+		WHERE GL.ID = #{gallery_id}
+		ORDER BY GL.UPLOAD_DATE DESC
+	</select>
+	
+	<select id="countMyPicture" resultType="java.lang.Integer">
+		SELECT COUNT(*) AS COUNT
+		FROM GALLERY
+		WHERE ID = #{gallery_id}
+		  AND PARTICIPANT_ID = #{participant_id}
+	</select>
+	
+	<select id="PictureDeleteOk" resultType="java.lang.String">
+		SELECT UPLOAD_DATE
+		FROM GALLERY
+		WHERE ID = #{gallery_id}
+		  AND PARTICIPANT_ID = #{participant_id}
+	</select>
+
+	<select id="countComment" resultType="java.lang.Integer">
+		SELECT COUNT(*) AS COUNT
+		FROM GL_COMMENT
+		WHERE GALLERY_ID = #{gallery_id}
+	</select>
+	
+	<select id="galleryCommentList" resultType="com.test.prj.GalleryDTO">
+		SELECT GC.ID AS COMMENT_ID, GC.WRITER_ID AS WRITER_ID
+		     , GC.CONTENTS AS CONTENTS
+		     , TO_CHAR(GC.WRITE_DATE, 'YYYY-MM-DD HH24:MI:SS') AS WRITE_DATE
+		     , UI.NAME AS WRITER_NAME
+		     , (CASE WHEN GC.WRITER_ID = #{member_id} THEN 1 ELSE 0 END) AS MY_COUNT
+		FROM GL_COMMENT GC LEFT JOIN GR_MATCH GM
+		     ON GC.WRITER_ID = GM.ID
+		     LEFT JOIN US_INFORMATION UI
+			 ON GM.USER_ID = UI.USER_ID
+		WHERE GC.GALLERY_ID = #{gallery_id}
+		ORDER BY GC.WRITE_DATE DESC
+	</select>
+	
+	<insert id="addGalleryComment">
+		INSERT INTO GL_COMMENT(ID, GALLERY_ID, WRITER_ID, CONTENTS, WRITE_DATE)
+		VALUES('GC0' || GLCOMMENTSEQ.NEXTVAL, #{gallery_id}, #{member_id}, #{contents}, SYSDATE)
+	</insert>
+
+	<select id="momentJoinCount" resultType="java.lang.Integer">
+		SELECT COUNT(*) AS COUNT
+		FROM MM_PARTICIPANT MT LEFT JOIN GR_MATCH GM
+		    ON GM.ID = MT.MEMBER_ID
+		    LEFT JOIN TBL_USER US
+		    ON US.ID = GM.USER_ID
+		WHERE MT.MOMENT_ID = #{moment_id}
+		  AND US.ID = #{user_id}
+		  AND (SELECT COUNT(*)
+               FROM MM_QUIT
+               WHERE QITER_ID = MT.ID) = 0
+          AND MT.MOMENT_ID NOT IN (SELECT MOMENT_ID
+                   	 			   FROM MM_NONACTIVE)
+	</select>
+	
+	<select id="getSettingFile" resultType="com.test.prj.GalleryDTO">
+		SELECT ROOT, FILE_SETTINGNAME
+		FROM GALLERY
+		WHERE ID = #{gallery_id}
+	</select>
+
+	<delete id="removeGalleryCommentAll">
+		DELETE
+		FROM GL_COMMENT
+		WHERE GALLERY_ID = #{gallery_id}
+	</delete>
+	
+	<delete id="removeGallery">
+		DELETE
+		FROM GALLERY
+		WHERE ID = #{gallery_id}
+	</delete>
+	
+	<delete id="removeGalleryComment">
+		DELETE
+		FROM GL_COMMENT
+		WHERE ID = #{comment_id}
+	</delete>
+	
+
+</mapper>

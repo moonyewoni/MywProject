@@ -1,0 +1,529 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+ "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.test.prj.IMomentDAO">
+
+	<select id="allList" resultType="com.test.prj.MomentDTO">
+		SELECT MOMENT_ID, MOMENT_NAME, GROUP_ID, GROUP_NAME
+         , PHASE_ID, PHASE
+         , DATE_ID, DATE_NAME, PLACE_ID, PLACE_NAME
+         , PARTI_NUM, MIN_PARTICIPANT, MAX_PARTICIPANT
+         , CREATION_DATE, PLAN_END_DATE, NOTE, END_TIME
+		FROM MMVIEW
+		WHERE GROUP_ID = #{group_id}
+		  AND MOMENT_ID NOT IN (SELECT MOMENT_ID
+                   	 			FROM MM_NONACTIVE)
+		ORDER BY PLAN_END_DATE
+	</select>
+	
+	<select id="oldList" resultType="com.test.prj.MomentDTO">
+		SELECT T.MOMENT_ID AS MOMENT_ID, T.MOMENT_NAME AS MOMENT_NAME
+		     , T.GROUP_ID AS GROUP_ID, T.GROUP_NAME AS GROUP_NAME
+		     , T.PHASE_ID AS PHASE_ID, T.PHASE AS PHASE
+		     , T.DATE_ID AS DATE_ID, T.DATE_NAME AS DATE_NAME
+		     , T.PLACE_ID AS PLACE_ID, T.PLACE_NAME AS PLACE_NAME
+		     , T.PARTI_NUM AS PARTI_NUM, T.MIN_PARTICIPANT AS MIN_PARTICIPANT
+		     , T.MAX_PARTICIPANT AS MAX_PARTICIPANT
+		     , T.CREATION_DATE AS CREATION_DATE
+		     , T.PLAN_END_DATE AS PLAN_END_DATE
+		     , T.NOTE AS NOTE
+		FROM
+		(
+		SELECT MOMENT_ID, MOMENT_NAME, GROUP_ID, GROUP_NAME
+		         , PHASE_ID, PHASE
+		         , DATE_ID, DATE_NAME, PLACE_ID, PLACE_NAME
+		         , PARTI_NUM, MIN_PARTICIPANT, MAX_PARTICIPANT
+		         , CREATION_DATE, PLAN_END_DATE, NOTE, END_TIME
+				FROM MMVIEW
+				WHERE GROUP_ID = 'GR01'
+				  AND PHASE_ID = 'MH03'
+				ORDER BY PLAN_END_DATE
+		) T
+		WHERE TO_DATE(DATE_NAME, 'YYYY-MM-DD HH24:MI:SS') &lt; SYSDATE
+	</select>
+	
+	<select id="searchEndMoment" resultType="com.test.prj.MomentDTO">
+		SELECT MOMENT_ID, PLAN_END_DATE, PARTI_NUM, MOMENT_NAME
+			 , DATE_NAME, PLACE_NAME, MIN_PARTICIPANT, MAX_PARTICIPANT
+		FROM MMVIEW
+		WHERE GROUP_ID = #{group_id}
+		  AND MOMENT_ID NOT IN (SELECT MOMENT_ID
+		                   	 	FROM MM_NONACTIVE)
+	</select>
+	
+	<insert id="addNonactiveMoment">
+		INSERT INTO MM_NONACTIVE(ID, MOMENT_ID, TYPE_ID, NONACTIVE_DATE)
+		VALUES('NA0' || MMNONACTIVESEQ.NEXTVAL, #{moment_id}, #{type_id}, SYSDATE)
+	</insert>
+	
+	<select id="myList" resultType="com.test.prj.MomentDTO">
+		SELECT DISTINCT(MMV.MOMENT_ID), MMV.MOMENT_NAME, MMV.GROUP_ID, MMV.GROUP_NAME
+         , MMV.PHASE_ID, MMV.PHASE
+         , MMV.DATE_ID, MMV.DATE_NAME, MMV.PLACE_ID, MMV.PLACE_NAME
+         , MMV.PARTI_NUM, MMV.MIN_PARTICIPANT, MMV.MAX_PARTICIPANT
+         , MMV.CREATION_DATE, MMV.PLAN_END_DATE, MMV.NOTE, MT.ID, MMV.END_TIME
+		FROM MMVIEW MMV RIGHT JOIN MM_PARTICIPANT MT
+        ON MMV.MOMENT_ID = MT.MOMENT_ID
+		WHERE MMV.GROUP_ID = #{group_id}
+          AND MT.MEMBER_ID = #{member_id}
+          AND MT.ID NOT IN (SELECT QITER_ID
+                            FROM MM_QUIT)
+          AND MMV.MOMENT_ID NOT IN (SELECT MOMENT_ID
+                   	 				FROM MM_NONACTIVE)
+		ORDER BY PLAN_END_DATE
+	</select>
+
+	<select id="allCount" resultType="java.lang.Integer">
+		SELECT COUNT(*) AS COUNT
+		FROM MOMENT
+		WHERE GROUP_ID = #{group_id}
+		  AND ID NOT IN (SELECT MOMENT_ID
+                   	     FROM MM_NONACTIVE)
+	</select>
+	
+	<select id="myCount" resultType="java.lang.Integer">
+		SELECT COUNT(*) AS COUNT
+		FROM MOMENT MM JOIN MM_PARTICIPANT MT
+		        ON MM.ID = MT.MOMENT_ID
+		WHERE GROUP_ID = #{group_id}
+		  AND MT.MEMBER_ID = #{member_id}
+		  AND MT.ID NOT IN (SELECT QITER_ID
+		                    FROM MM_QUIT)
+		  AND MM.ID NOT IN (SELECT MOMENT_ID
+                   	     	FROM MM_NONACTIVE)
+	</select>
+	
+	<select id="countMember" resultType="java.lang.Integer">
+		SELECT COUNT(*) AS COUNT
+		FROM GR_MATCH
+		WHERE GROUP_ID = #{group_id}
+		  AND ID NOT IN (SELECT MEMBER_ID
+                 		 FROM GR_MEMBER_QUIT)
+	</select>
+	
+	<select id="countDate" resultType="java.lang.Integer">
+		SELECT COUNT(*) AS COUNT
+		FROM MM_DATE
+	</select>
+	
+	<insert id="addDate">
+		INSERT INTO MM_DATE(ID, YEAR, MONTH, DAY, TIME)
+		VALUES(#{date_id}, #{year}, #{month}, #{day}, #{time})
+	</insert>
+	
+	<select id="countPlace" resultType="java.lang.Integer">
+		SELECT COUNT(*) AS COUNT
+		FROM MM_PLACE
+	</select>
+	
+	<insert id="addPlace">
+		INSERT INTO MM_PLACE(ID, NAME, DETAIL_ID)
+		VALUES(#{place_id}, #{place_name}, #{detail_id})
+	</insert>
+	
+	<select id="countMoment" resultType="java.lang.Integer">
+		SELECT COUNT(*) AS COUNT
+		FROM MOMENT
+	</select>
+	
+	<insert id="addMoment">
+		INSERT INTO MOMENT(ID, GROUP_ID, PHASE_ID, DATE_ID, PLACE_ID
+				 , CREATION_DATE, NAME
+                 , MIN_PARTICIPANT, MAX_PARTICIPANT, NOTE)
+		VALUES(#{moment_id}, #{group_id}, #{phase_id}, #{date_id}, #{place_id}
+			 , SYSDATE, #{moment_name}, #{min_participant}, #{max_participant}, #{note})
+	</insert>
+	
+	<select id="searchMemberId" resultType="java.lang.String">
+		SELECT GM.ID AS MEMBER_ID
+		FROM GR_MATCH GM LEFT JOIN TBL_GROUP GR
+		    ON GR.ID = GM.GROUP_ID
+		    LEFT JOIN TBL_USER US
+		    ON US.ID = GM.USER_ID
+		WHERE US.ID = #{user_id}
+		  AND GR.ID = #{group_id}
+		  AND GM.ID NOT IN (SELECT MEMBER_ID
+                 			FROM GR_MEMBER_QUIT)
+	</select>
+
+	<select id="countMemberId" resultType="java.lang.Integer">
+		SELECT COUNT(*) AS COUNT
+		FROM GR_MATCH GM LEFT JOIN TBL_GROUP GR
+		    ON GR.ID = GM.GROUP_ID
+		    LEFT JOIN TBL_USER US
+		    ON US.ID = GM.USER_ID
+		WHERE US.ID = #{user_id}
+		  AND GR.ID = #{group_id}
+		  AND GM.ID NOT IN (SELECT MEMBER_ID
+                 			FROM GR_MEMBER_QUIT)
+	</select>
+	
+	<insert id="addMomentMember">
+		INSERT INTO MM_PARTICIPANT(ID, MOMENT_ID, MEMBER_ID, PARTICIPANT_DATE)
+		VALUES('MT0' || MMPARTICIPANTSEQ.NEXTVAL, #{moment_id}, #{member_id}, SYSDATE)
+	</insert>
+
+	<select id="momentList" resultType="com.test.prj.MomentDTO">
+		SELECT MOMENT_ID, MOMENT_NAME, GROUP_ID, GROUP_NAME
+         , PHASE_ID, PHASE
+         , DATE_ID, DATE_NAME, PLACE_ID, PLACE_NAME, DETAIL_ID
+         , PARTI_NUM, MIN_PARTICIPANT, MAX_PARTICIPANT
+         , CREATION_DATE, PLAN_END_DATE, NOTE, END_TIME
+		FROM MMVIEW
+		WHERE MOMENT_ID = #{moment_id}
+		  AND MOMENT_ID NOT IN (SELECT MOMENT_ID
+                   	 			FROM MM_NONACTIVE)
+	</select>
+	
+	<select id="momentJoinCount" resultType="java.lang.Integer">
+		SELECT COUNT(*) AS COUNT
+		FROM MM_PARTICIPANT MT LEFT JOIN GR_MATCH GM
+		    ON GM.ID = MT.MEMBER_ID
+		    LEFT JOIN TBL_USER US
+		    ON US.ID = GM.USER_ID
+		WHERE MT.MOMENT_ID = #{moment_id}
+		  AND US.ID = #{user_id}
+		  AND (SELECT COUNT(*)
+               FROM MM_QUIT
+               WHERE QITER_ID = MT.ID) = 0
+          AND MT.MOMENT_ID NOT IN (SELECT MOMENT_ID
+                   	 			   FROM MM_NONACTIVE)
+	</select>
+	
+	<select id="momentJoinAllCount" resultType="java.lang.Integer">
+		SELECT COUNT(*) AS COUNT
+		FROM MM_PARTICIPANT MT LEFT JOIN GR_MATCH GM
+		    ON GM.ID = MT.MEMBER_ID
+		    LEFT JOIN TBL_USER US
+		    ON US.ID = GM.USER_ID
+		WHERE MT.MOMENT_ID = #{moment_id}
+		  AND (SELECT COUNT(*)
+               FROM MM_QUIT
+               WHERE QITER_ID = MT.ID) = 0
+          AND MT.MOMENT_ID NOT IN (SELECT MOMENT_ID
+                   	 			   FROM MM_NONACTIVE)
+	</select>
+	
+	<!-- 사용자가 선택한 일자에 일정(년, 월, 일 기준)이 이미 존재하는지 확인 -->
+	<select id="momentDateCount" resultType="java.lang.Integer">
+		SELECT COUNT(*) AS COUNT
+		FROM MM_DATE MD RIGHT JOIN MOMENT MM
+		    ON MD.ID = MM.DATE_ID
+		    JOIN MM_PARTICIPANT MT
+		    ON MM.ID = MT.MOMENT_ID
+		    LEFT JOIN GR_MATCH GM
+		    ON GM.ID = MT.MEMBER_ID
+		    LEFT JOIN TBL_USER US
+		    ON US.ID = GM.USER_ID
+		WHERE US.ID = #{user_id}
+		  AND MD.DAY IS NOT NULL
+		  AND TO_CHAR(TO_DATE(MD.YEAR || '-' || MD.MONTH || '-' || MD.DAY, 'YYYY-MM-DD'), 'YYYY-MM-DD')
+		      = TO_CHAR(TO_DATE(#{date_name}, 'YYYY-MM-DD'), 'YYYY-MM-DD')
+		  AND (SELECT COUNT(*)
+               FROM MM_QUIT
+               WHERE QITER_ID = MT.ID) = 0
+          AND MT.MOMENT_ID NOT IN (SELECT MOMENT_ID
+                   	 			   FROM MM_NONACTIVE)
+	</select>
+	
+	<update id="modifyPhase">
+		UPDATE MOMENT
+		SET PHASE_ID = #{phase_id}
+		WHERE ID = #{moment_id}
+	</update>
+	
+	<select id="getPartiId" resultType="java.lang.String">
+		SELECT ID AS PARTICIPANT_ID
+		FROM MM_PARTICIPANT MT
+		WHERE MEMBER_ID = #{member_id}
+		  AND MOMENT_ID = #{moment_id}
+		  AND (SELECT COUNT(*)
+               FROM MM_QUIT
+               WHERE QITER_ID = MT.ID) = 0
+          AND MT.MOMENT_ID NOT IN (SELECT MOMENT_ID
+                  	 	    	   FROM MM_NONACTIVE)
+	</select>
+	
+	<select id="getPartiName" resultType="com.test.prj.MomentDTO">
+		SELECT NAME AS PARTICIPANT_NAME
+		FROM US_INFORMATION UI RIGHT JOIN GR_MATCH GM
+		     ON UI.USER_ID = GM.USER_ID
+		     RIGHT JOIN MM_PARTICIPANT MT
+		     ON GM.ID = MT.MEMBER_ID
+		WHERE MT.MOMENT_ID = #{moment_id}
+		  AND MT.ID NOT IN (SELECT QITER_ID
+                  	 	    FROM MM_QUIT)
+	</select>
+	
+	<insert id="cancelMoment">
+		INSERT INTO MM_QUIT(ID, QITER_ID, QUIT_DATE)
+		VALUES('MQ0' || MMQUITSEQ.NEXTVAL, #{participant_id}, SYSDATE)
+	</insert>
+	
+	<select id="surveyCount" resultType="java.lang.Integer">
+		SELECT COUNT(*) AS COUNT
+		FROM MM_SURVEY
+		WHERE MOMENT_ID = #{moment_id}
+		  AND TYPE_ID = #{type_id}
+		  AND WHETHER ='N'
+	</select>
+	
+	<select id="partiCount" resultType="java.lang.Integer">
+		SELECT COUNT(*) AS COUNT
+		FROM MM_PARTICIPANT MT
+		WHERE MEMBER_ID = #{member_id}
+		  AND MOMENT_ID = #{moment_id}
+		  AND (SELECT COUNT(*)
+               FROM MM_QUIT
+               WHERE QITER_ID = MT.ID) = 0
+          AND MT.MOMENT_ID NOT IN (SELECT MOMENT_ID
+                  	 	    	   FROM MM_NONACTIVE)
+	</select>
+	
+	<select id="countSurveyNum" resultType="java.lang.Integer">
+		SELECT COUNT(*) AS COUNT
+		FROM MM_SURVEY
+	</select>
+
+	<insert id="addSurvey">
+		INSERT INTO MM_SURVEY(ID, MOMENT_ID, TYPE_ID, PRE_SURVEY_ID, RESURVEY_MEMBER_ID)
+		VALUES(#{survey_id}, #{moment_id}, #{type_id}, NULL, NULL)
+	</insert>
+	
+	<select id="searchSurveyId" resultType="java.lang.String">
+		SELECT ID
+		FROM MM_SURVEY
+		WHERE PRE_SURVEY_ID IS NULL
+		  AND MOMENT_ID = #{moment_id}
+		  AND TYPE_ID = #{type_id}
+	</select>
+	
+	<insert id="addSurveyResponse">
+		INSERT INTO MM_SURVEY_RESPONSE(ID, SURVEY_ID, PARTICIPANT_ID, RESPONSE, OTHERS, IMPOSSIBLE_DATE)
+		VALUES('SR0' || MMSURVEYRESPONSESEQ.NEXTVAL, #{survey_id}, #{participant_id}, #{response, jdbcType=VARCHAR}, #{others, jdbcType=VARCHAR}, #{impossible_date, jdbcType=VARCHAR})
+	</insert>
+	
+	<select id="countSurveyResponseNum" resultType="java.lang.Integer">
+		SELECT COUNT(*) AS COUNT
+		FROM MM_SURVEY_RESPONSE SR LEFT JOIN MM_SURVEY MS
+		     ON SR.SURVEY_ID = MS.ID
+		WHERE SR.SURVEY_ID = #{survey_id}
+		  AND SR.PARTICIPANT_ID = #{participant_id}
+		  AND MS.MOMENT_ID = #{moment_id}
+	</select>
+	
+	<select id="countSurveyResponse" resultType="com.test.prj.MomentDTO">
+		SELECT RESPONSE, OTHERS, IMPOSSIBLE_DATE
+		FROM MM_SURVEY_RESPONSE SR LEFT JOIN MM_SURVEY MS
+		     ON SR.SURVEY_ID = MS.ID
+		WHERE SR.SURVEY_ID = #{survey_id}
+		  AND SR.PARTICIPANT_ID = #{participant_id}
+		  AND MS.MOMENT_ID = #{moment_id}
+	</select>
+	
+	<select id="checkSurveyComplete" resultType="com.test.prj.MomentDTO">
+		SELECT SR.RESPONSE AS RESPONSE, SR.ID AS SURVEY_RESPONSE_ID, SR.SURVEY_ID AS SURVEY_ID
+         	 , SR.OTHERS AS OTHERS, SR.IMPOSSIBLE_DATE AS IMPOSSIBLE_DATE
+		FROM MM_SURVEY_RESPONSE SR
+		WHERE (SELECT MOMENT_ID
+		       FROM MM_SURVEY MS
+		       WHERE MS.ID = SR.SURVEY_ID) = #{moment_id}
+          AND SR.SURVEY_ID = #{survey_id}
+	</select>
+	
+	<select id="checkSurveyOneComplete" resultType="com.test.prj.MomentDTO">
+		SELECT SR.RESPONSE AS RESPONSE, SR.ID AS SURVEY_RESPONSE_ID, SR.SURVEY_ID AS SURVEY_ID
+		FROM MM_SURVEY_RESPONSE SR
+		WHERE (SELECT MOMENT_ID
+		       FROM MM_SURVEY MS
+		       WHERE MS.ID = SR.SURVEY_ID) = #{moment_id}
+          AND SR.SURVEY_ID = #{survey_id}
+          AND SR.RESPONSE IS NOT NULL
+	</select>
+	
+	<select id="voteCount" resultType="java.lang.Integer">
+		SELECT COUNT(*) AS COUNT
+		FROM MM_VOTE
+		WHERE SURVEY_ID = #{survey_id}
+		  AND TYPE_ID = #{type_id}
+		  <!-- AND WHETHER ='N' --> <!-- 추후 검토 --> 
+	</select>
+	
+	<select id="countVoteNum" resultType="java.lang.Integer">
+		SELECT COUNT(*) AS COUNT
+		FROM MM_VOTE
+	</select>
+	
+	<insert id="addVote">
+		INSERT INTO MM_VOTE(ID, SURVEY_ID, TYPE_ID, PRE_VOTE_ID, REVOTE_MEMBER_ID)
+		VALUES(#{vote_id}, #{survey_id}, #{type_id}, NULL, NULL)
+	</insert>
+	
+	<select id="getVoteId" resultType="java.lang.String">
+		SELECT ID AS VOTE_ID
+		FROM MM_VOTE
+		WHERE SURVEY_ID = #{survey_id}
+	</select>
+	
+	<insert id="addVoteResponse">
+		INSERT INTO MM_VOTE_RESPONSE(ID, VOTE_ID, VOTE_SELECT_ID, PARTICIPANT_ID, SELECT_DATE)
+		VALUES('VR0' || MMVOTERESPONSESEQ.NEXTVAL, #{vote_id}, #{survey_response_id}, #{participant_id}, SYSDATE)
+	</insert>
+
+	<select id="CountVoteResponseNum" resultType="java.lang.Integer">
+		SELECT COUNT(*) AS COUNT
+		FROM MM_VOTE_RESPONSE VR LEFT JOIN MM_VOTE MV
+		     ON VR.VOTE_ID = MV.ID
+		WHERE MV.TYPE_ID = #{type_id}
+		  AND VR.PARTICIPANT_ID = #{participant_id}
+	</select>
+	
+	<select id="getVoteResponse" resultType="java.lang.String">
+		SELECT VR.VOTE_SELECT_ID AS VOTE_SELECT_ID
+		FROM MM_VOTE_RESPONSE VR LEFT JOIN MM_VOTE MV
+		     ON VR.VOTE_ID = MV.ID
+		WHERE VR.PARTICIPANT_ID = #{participant_id}
+		  AND MV.TYPE_ID = #{type_id}
+	</select>
+	
+	<select id="getVoteMax" resultType="java.lang.String">
+		SELECT T.VOTE_SELECT_ID
+		FROM 
+	    (
+	    SELECT VOTE_SELECT_ID, COUNT(VOTE_SELECT_ID) AS COUNT
+	    FROM MM_VOTE_RESPONSE
+	    WHERE VOTE_ID = #{vote_id}
+	    GROUP BY VOTE_SELECT_ID
+	    ) T
+		WHERE T.COUNT = (SELECT MAX(COUNT(VOTE_SELECT_ID))
+		                 FROM MM_VOTE_RESPONSE
+		                 WHERE VOTE_ID = #{vote_id}
+		                 GROUP BY VOTE_SELECT_ID)
+	</select>
+	
+	
+	<select id="checkVoteComplete" resultType="java.lang.Integer">
+		SELECT COUNT(*) AS COUNT
+		FROM MM_VOTE_RESPONSE
+		WHERE VOTE_ID = #{vote_id}
+	</select>
+	
+	<update id="modifyMomentName">
+		UPDATE MOMENT
+		SET NAME = (SELECT SR.RESPONSE
+					FROM MM_SURVEY_RESPONSE SR JOIN MM_SURVEY MS
+					     ON SR.SURVEY_ID = MS.ID
+					WHERE SR.ID = #{survey_response_id})
+		WHERE ID = #{moment_id}
+	</update>
+	
+	<update id="modifyDateName">
+		UPDATE MM_DATE
+		SET YEAR = (SELECT SUBSTR(SR.RESPONSE, 1, 4) AS YEAR
+		            FROM MM_SURVEY_RESPONSE SR JOIN MM_SURVEY MS
+		                 ON SR.SURVEY_ID = MS.ID
+		            WHERE SR.ID = #{survey_response_id})
+		  , MONTH = (SELECT SUBSTR(SR.RESPONSE, 6, 2) AS MONTH
+		            FROM MM_SURVEY_RESPONSE SR JOIN MM_SURVEY MS
+		                 ON SR.SURVEY_ID = MS.ID
+		            WHERE SR.ID = #{survey_response_id})
+		  , DAY = (SELECT SUBSTR(SR.RESPONSE, 9, 2) AS DAY
+		            FROM MM_SURVEY_RESPONSE SR JOIN MM_SURVEY MS
+		                 ON SR.SURVEY_ID = MS.ID
+		            WHERE SR.ID = #{survey_response_id})
+		  , TIME = (SELECT SUBSTR(SR.RESPONSE, 12) AS TIME
+		            FROM MM_SURVEY_RESPONSE SR JOIN MM_SURVEY MS
+		                 ON SR.SURVEY_ID = MS.ID
+		            WHERE SR.ID = #{survey_response_id})
+		WHERE ID = (SELECT DATE_ID
+			        FROM MOMENT
+			        WHERE ID = #{moment_id})
+	</update>
+	
+	<update id="modifyPlaceName">
+		UPDATE MM_PLACE
+		SET NAME = (SELECT SR.RESPONSE
+					FROM MM_SURVEY_RESPONSE SR JOIN MM_SURVEY MS
+					     ON SR.SURVEY_ID = MS.ID
+					WHERE SR.ID = #{survey_response_id})
+		WHERE ID = (SELECT PLACE_ID
+			        FROM MOMENT
+			        WHERE ID = #{moment_id})
+	</update>
+	
+	<update id="modifyPlaceDetail">
+		UPDATE MM_PLACE
+		SET DETAIL_ID = 'ML02'
+		WHERE ID = (SELECT PLACE_ID
+		            FROM MOMENT
+		            WHERE ID = #{moment_id})
+	</update>
+	
+	<update id="modifyMinParticipant">
+		UPDATE MOMENT
+		SET MIN_PARTICIPANT = (SELECT SR.RESPONSE
+							   FROM MM_SURVEY_RESPONSE SR JOIN MM_SURVEY MS
+								 	ON SR.SURVEY_ID = MS.ID
+							   WHERE SR.ID = #{survey_response_id})
+		WHERE ID = #{moment_id}
+	</update>
+	
+	<update id="modifyMaxParticipant">
+		UPDATE MOMENT
+		SET MAX_PARTICIPANT = (SELECT SR.RESPONSE
+							   FROM MM_SURVEY_RESPONSE SR JOIN MM_SURVEY MS
+								 	ON SR.SURVEY_ID = MS.ID
+							   WHERE SR.ID = #{survey_response_id})
+		WHERE ID = #{moment_id}
+	</update>
+	
+	<update id="modifyNote">
+		UPDATE MOMENT
+		SET NOTE = (SELECT SR.RESPONSE
+					FROM MM_SURVEY_RESPONSE SR JOIN MM_SURVEY MS
+					ON SR.SURVEY_ID = MS.ID
+					WHERE SR.ID = #{survey_response_id})
+		WHERE ID = #{moment_id}
+	</update>
+	
+	<select id="checkModifyVoteComplete" resultType="java.lang.Integer">
+		SELECT COUNT(*) AS COUNT
+		FROM MM_VOTE
+		WHERE ID = #{vote_id}
+		  AND WHETHER = 'N'
+	</select>
+	
+	<update id="modifyWhetherVote">
+		UPDATE MM_VOTE
+		SET WHETHER = 'Y'
+		WHERE ID = #{vote_id}
+	</update>
+
+	<update id="modifyWhetherSurvey">
+		UPDATE MM_SURVEY
+		SET WHETHER = 'Y'
+		WHERE ID = #{survey_id}
+	</update>
+	
+	<select id="checkModifySurveyComplete" resultType="java.lang.Integer">
+		SELECT COUNT(*) AS COUNT
+		FROM MM_SURVEY
+		WHERE ID = #{survey_id}
+		  AND WHETHER = 'N'
+	</select>
+	
+	<select id="checkMomentCompleteCount" resultType="java.lang.Integer">
+		SELECT COUNT(*) AS COUNT
+		FROM
+		(
+		SELECT MS.WHETHER AS WHETHER1, MV.WHETHER AS WHETHER2
+		FROM MM_SURVEY MS LEFT JOIN MM_VOTE MV
+			ON MS.ID = MV.SURVEY_ID
+		WHERE MS.MOMENT_ID = #{moment_id}
+		) T
+		WHERE T.WHETHER1 ='N'
+		   OR T.WHETHER2 ='N'
+	</select>
+	
+</mapper>

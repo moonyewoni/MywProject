@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+ "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.test.prj.IAdminDAO">
+
+	<select id="countUser" resultType="java.lang.Integer">
+
+		SELECT COUNT(*)
+		FROM
+		US_INFORMATION
+		WHERE USER_ID NOT IN ( SELECT USER_ID
+		FROM US_BACKUP)
+
+	</select>
+
+	<select id="countNewUser" resultType="java.lang.Integer">
+
+		SELECT COUNT(*)
+		FROM
+		US_INFORMATION
+		WHERE TRUNC(SIGNUP_DATE) >=
+		TRUNC(ADD_MONTHS(SYSDATE,
+		-1))
+
+	</select>
+
+	<select id="countGroup" resultType="java.lang.Integer">
+
+		SELECT COUNT(*) AS COUNT
+		FROM
+		TBL_GROUP
+
+	</select>
+
+	<select id="countNewGroup" resultType="java.lang.Integer">
+
+		SELECT COUNT(*)
+		FROM
+		TBL_GROUP
+		WHERE TRUNC(OPEN_DATE) >=
+		TRUNC(ADD_MONTHS(SYSDATE,
+		-1))
+
+	</select>
+
+	<select id="countMoment" resultType="java.lang.Integer">
+
+		SELECT COUNT(*)
+		FROM MOMENT
+		WHERE ID NOT IN (SELECT MOMENT_ID
+		FROM MM_NONACTIVE)
+
+	</select>
+
+	<select id="countNewMoment" resultType="java.lang.Integer">
+
+		SELECT COUNT(*)
+		FROM
+		MOMENT
+		WHERE ID NOT IN (SELECT MOMENT_ID
+		FROM MM_NONACTIVE)
+		AND
+		TRUNC(CREATION_DATE) >=
+		TRUNC(ADD_MONTHS(SYSDATE,
+		-1))
+
+	</select>
+
+	<select id="countPhaseMoment" resultType="java.lang.Integer">
+		SELECT count(*)
+		FROM
+		MOMENT
+		WHERE ID NOT IN (SELECT MOMENT_ID
+		FROM MM_NONACTIVE)
+		group by
+		phase_id
+		order by phase_id
+
+	</select>
+
+	<select id="countMomentChange"
+		resultType="com.test.prj.AdminDTO">
+		SELECT GENERATED_DATE , NUM_RECORDS
+		FROM CHANGEMOMENTVIEW
+	</select>
+
+	<select id="countGroupChange" resultType="com.test.prj.AdminDTO">
+		SELECT GENERATED_DATE ,
+		NUM_RECORDS
+		FROM CHANGEGROUPVIEW
+	</select>
+
+	<select id="countUserChange" resultType="com.test.prj.AdminDTO">
+		SELECT GENERATED_DATE ,
+		NUM_RECORDS
+		FROM CHANGEUSERVIEW
+	</select>
+
+
+	<select id="countGender" resultType="java.lang.Integer">
+		SELECT COUNT(*)
+		FROM
+		US_INFORMATION
+		GROUP BY GENDER_ID
+		ORDER BY GENDER_ID
+
+	</select>
+
+	<select id="groupList" resultType="com.test.prj.GroupDTO">
+		SELECT G.ID, GC.NAME,
+		GC.INTRODUCTION, GC.ROOT, TO_CHAR(G.OPEN_DATE, 'YYYY-MM-DD') AS OPEN_DATE
+		,(SELECT COUNT(*)
+       		FROM GR_MATCH
+       		WHERE GROUP_ID= G.ID) AS COUNT
+		FROM TBL_GROUP G JOIN GR_CREATION GC
+		ON G.CREATION_ID = GC.ID
+	</select>
+
+
+</mapper>

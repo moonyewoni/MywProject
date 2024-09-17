@@ -1,0 +1,487 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+ "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.test.prj.IGroupDAO">
+
+   <select id="list" resultType="com.test.prj.GroupDTO">
+ 		SELECT G.ID, GC.NAME, GC.INTRODUCTION, GC.ROOT, G.OPEN_DATE
+		FROM TBL_GROUP G JOIN GR_CREATION GC
+    	ON G.CREATION_ID = GC.ID
+   </select>
+   
+   <select id="groupMemberCount" resultType="String">
+		SELECT COUNT(H.ID) AS COUNT
+		FROM GR_MATCH H
+		LEFT JOIN GR_PREINVITE P
+		ON H.ID = P.MEMBER_ID
+		LEFT JOIN GR_INVITE I
+		ON H.ID = I.RECEPTION_ID
+		LEFT JOIN GR_SIGNUP N
+		ON H.ID = N.MEMBER_ID
+		WHERE H.GROUP_ID = #{group_id}
+		AND (P.SIGNUP_WHETHER_ID = 'SW01'
+		OR I.WHETHER_ID = 'SW01'
+		OR N.WHETHER_ID = 'SW01')
+   </select>
+
+   <select id="count" resultType="java.lang.Integer">
+  		SELECT COUNT(*) AS COUNT
+    	FROM TBL_GROUP
+   </select>
+   
+   <select id="nextGTId" resultType="String">
+		SELECT 'GT0' || TO_CHAR(MAX(TO_NUMBER(SUBSTR(ID, 3,4)))+1) AS MAXID
+		FROM GR_CREATION
+   </select>
+   
+   <insert id="creationAdd">
+        INSERT INTO GR_CREATION(ID, USER_ID, NAME, INTRODUCTION, ROOT)
+        VALUES(#{id}, #{user_id}, #{name}, #{introduction}, #{root})
+   </insert>
+   
+   <select id="creationList" resultType="com.test.prj.GroupDTO">
+		SELECT C.ID, C.USER_ID, C.NAME, C.INTRODUCTION, C.ROOT,
+		C.CREATION_DATE, COUNT(*) AS COUNT, C.CREATION_DATE + 7 AS END_DATE
+		FROM GR_CREATION C LEFT JOIN GR_PREINVITE P
+		ON C.ID = P.CREATE_ID
+		AND P.SIGNUP_WHETHER_ID = 'SW01'
+		GROUP BY
+		C.ID, C.USER_ID, C.NAME, C.INTRODUCTION, C.ROOT, C.CREATION_DATE,
+		P.CREATE_ID
+   </select>
+   
+   <select id="creationCount" resultType="java.lang.Integer">
+		SELECT COUNT(*)
+		FROM GR_CREATIONVIEW
+		WHERE COUNT &lt; 5
+		AND END_DATE > SYSDATE
+   </select>
+   
+   <select id="questionForm" resultType="com.test.prj.GroupDTO">
+   		SELECT ID, CONTENT
+   		FROM GR_SIGNUP_QUESTION
+    	WHERE GROUP_ID = #{group_id}
+   </select>
+   
+   <select id="nextGMId" resultType="String">
+        SELECT 'GM0' || TO_CHAR(MAX(TO_NUMBER(SUBSTR(ID, 3,4)))+1) AS MAXID
+     	FROM GR_MATCH
+   </select>
+   
+   <insert id="matchAdd">
+     	INSERT INTO GR_MATCH(ID, USER_ID, GROUP_ID, TYPE_ID)
+   	 	VALUES(#{match_id}, #{user_id}, #{group_id}, #{type_id})
+   </insert>
+   
+   <select id="nextSUId" resultType="String">
+        SELECT 'SU0' || TO_CHAR(MAX(TO_NUMBER(SUBSTR(ID, 3,4)))+1) AS MAXID
+     	FROM GR_SIGNUP
+   </select>
+   
+   <insert id="signupAdd">
+      	INSERT INTO GR_SIGNUP(ID, MEMBER_ID, GROUP_ID, SIGNUP_DATE, ALLOW_DATE, WHETHER_ID, ALARM_CHECK_DATE)
+    	VALUES(#{signup_id}, #{match_id}, #{group_id}, SYSDATE, NULL, NULL, NULL)
+   </insert>
+    
+      
+   <select id="nextSAId" resultType="String">
+        SELECT 'SA0' || TO_CHAR(MAX(TO_NUMBER(SUBSTR(ID, 3,4)))+1)  AS MAXID
+     	FROM GR_SIGNUP_ANSWER
+   </select>
+   
+   <insert id="answerAdd">
+        INSERT INTO GR_SIGNUP_ANSWER(ID, SIGNUP_ID, QUESTION_ID, CONTENT, ANSWER_DATE) 
+        VALUES(#{answer_id}, #{signup_id}, #{question_id}, #{content}, SYSDATE)
+   </insert>
+   
+   <select id="GroupMemberGMId" resultType="String">
+		SELECT H.ID AS MATCH_ID
+		FROM TBL_USER T
+		JOIN GR_MATCH H
+		ON T.ID = H.USER_ID
+		LEFT JOIN GR_PREINVITE P
+		ON H.ID = P.MEMBER_ID
+		LEFT JOIN GR_INVITE I
+		ON H.ID = I.RECEPTION_ID
+		LEFT JOIN GR_SIGNUP N
+		ON H.ID = N.MEMBER_ID
+		WHERE T.ID = #{user_id}
+		AND H.GROUP_ID = #{group_id}
+		AND (P.SIGNUP_WHETHER_ID = 'SW01'
+		OR I.WHETHER_ID = 'SW01'
+		OR N.WHETHER_ID = 'SW01')
+   </select>
+   
+   <select id="searchGRId" resultType="String">
+    	SELECT GROUP_ID
+      	FROM GR_MATCH
+      	WHERE ID = #{match_id}
+   </select>
+   
+   <select id="activeGroupId" resultType="com.test.prj.GroupDTO">
+		WITH RANKEDRESULTS AS
+		(SELECT
+		GROUP_ID,
+		COUNT,
+		RANK() OVER (ORDER BY COUNT DESC) AS RANK
+		FROM GR_MAXINFOGROUPVIEW)
+		SELECT GROUP_ID, COUNT
+		FROM RANKEDRESULTS
+		WHERE RANK = 1
+   </select>
+   
+   <select id="groupInformation" resultType="com.test.prj.GroupDTO">
+		SELECT G.ID, G.OPEN_DATE, C.NAME, C.INTRODUCTION, C.ROOT
+		FROM TBL_GROUP G JOIN GR_CREATION C
+		ON C.ID = G.CREATION_ID
+		WHERE G.ID = #{group_id}
+   </select>
+   
+   <select id="recentList" resultType="com.test.prj.GroupDTO">
+		SELECT G.ID, G.OPEN_DATE, C.NAME, C.INTRODUCTION, C.ROOT
+		FROM TBL_GROUP G JOIN GR_CREATION C
+		ON C.ID = G.CREATION_ID
+		WHERE OPEN_DATE >= SYSDATE - 7
+   </select>
+   
+   <select id="largeGroupId" resultType="com.test.prj.GroupDTO">
+		WITH RANKEDRESULTS AS
+		(SELECT
+		GROUP_ID,
+		COUNT,
+		RANK() OVER (ORDER BY COUNT DESC) AS RANK
+		FROM GR_MAXMEMBERGROUPVIEW)
+		SELECT GROUP_ID, COUNT
+		FROM RANKEDRESULTS
+		WHERE RANK = 1
+   </select>
+   
+   <select id="groupNameCount" resultType="int">
+		SELECT COUNT(*) AS COUNT
+		FROM TBL_GROUP G JOIN GR_CREATION C
+		ON C.ID = G.CREATION_ID
+		WHERE NAME = #{name}
+   </select>
+   
+   <select id="searchGroupResult" resultType="com.test.prj.GroupDTO">
+		SELECT G.ID, C.NAME, C.INTRODUCTION, C.ROOT, G.OPEN_DATE
+		FROM TBL_GROUP G JOIN GR_CREATION C
+		ON C.ID = G.CREATION_ID
+		WHERE NAME = #{name}
+   </select>
+   
+   <select id="creationGroupCount" resultType="int">
+		SELECT COUNT(*)
+		FROM GR_CREATIONVIEW
+		WHERE COUNT &lt; 5
+		AND END_DATE > SYSDATE
+		AND USER_ID = #{user_id}
+   </select>
+   
+   <select id="managerCount" resultType="java.lang.Integer">
+		SELECT COUNT(H.ID) AS COUNT
+		FROM GR_MATCH H
+		RIGHT JOIN GR_MANAGER R
+		ON H.ID = R.MATCH_ID
+		LEFT JOIN GR_PREINVITE P
+		ON H.ID = P.MEMBER_ID
+		LEFT JOIN GR_INVITE I
+		ON H.ID = I.RECEPTION_ID
+		LEFT JOIN GR_SIGNUP N
+		ON H.ID = N.MEMBER_ID
+		WHERE H.GROUP_ID = #{group_id}
+		AND (P.SIGNUP_WHETHER_ID = 'SW01'
+		OR I.WHETHER_ID = 'SW01'
+		OR N.WHETHER_ID = 'SW01')
+	</select>
+  
+   <select id="managerList" resultType="com.test.prj.GroupDTO">
+		SELECT I.NAME AS NAME, H.ID AS MATCH_ID
+		FROM GR_MANAGER R
+		LEFT JOIN GR_MATCH H
+		ON R.MATCH_ID = H.ID
+		LEFT JOIN GR_PREINVITE P
+		ON H.ID = P.MEMBER_ID
+		LEFT JOIN GR_INVITE I
+		ON H.ID = I.RECEPTION_ID
+		LEFT JOIN GR_SIGNUP N
+		ON H.ID = N.MEMBER_ID
+		JOIN TBL_USER U
+		ON H.USER_ID = U.ID
+		JOIN US_INFORMATION I
+		ON U.ID = I.USER_ID
+		WHERE H.GROUP_ID = #{group_id}
+		AND (P.SIGNUP_WHETHER_ID = 'SW01'
+		OR I.WHETHER_ID = 'SW01'
+		OR N.WHETHER_ID = 'SW01')
+		ORDER BY I.NAME
+	</select>
+  	
+  	<select id="generalMemberList" resultType="com.test.prj.GroupDTO">
+		SELECT I.NAME AS NAME
+		FROM GR_MANAGER R
+		RIGHT JOIN GR_MATCH H
+		ON R.MATCH_ID = H.ID
+		LEFT JOIN GR_PREINVITE P
+		ON H.ID = P.MEMBER_ID
+		LEFT JOIN GR_INVITE I
+		ON H.ID = I.RECEPTION_ID
+		LEFT JOIN GR_SIGNUP N
+		ON H.ID = N.MEMBER_ID
+		JOIN TBL_USER U
+		ON H.USER_ID = U.ID
+		JOIN US_INFORMATION I
+		ON U.ID = I.USER_ID
+		WHERE R.MATCH_ID IS NULL
+		AND H.GROUP_ID = #{group_id}
+		AND (P.SIGNUP_WHETHER_ID = 'SW01'
+		OR I.WHETHER_ID = 'SW01'
+		OR N.WHETHER_ID = 'SW01')
+		ORDER BY I.NAME
+	</select>
+	
+	<select id="mostParticipantsMoment" resultType="com.test.prj.MomentDTO">
+	      SELECT MOMENT_ID, MOMENT_NAME
+	      FROM MMVIEW
+	      WHERE GROUP_ID = #{group_id}
+	      AND MOMENT_ID NOT IN (SELECT MOMENT_ID
+	      FROM MM_NONACTIVE)
+	      AND PARTI_NUM = ANY(SELECT MAX(PARTI_NUM)
+	      FROM MMVIEW
+	      WHERE GROUP_ID = #{group_id})
+	      ORDER BY PLAN_END_DATE
+   	</select>
+	
+	<select id="mostRecentMoment" resultType="com.test.prj.MomentDTO">
+		SELECT MOMENT_ID, MOMENT_NAME
+		FROM MMVIEW
+		WHERE GROUP_ID = #{group_id}
+		AND MOMENT_ID NOT IN (SELECT MOMENT_ID FROM MM_NONACTIVE)
+		AND LENGTH(DATE_NAME) = 19
+		AND TO_DATE(DATE_NAME, 'YYYY-MM-DD HH24:MI:SS') = (
+		SELECT MIN(TO_DATE(DATE_NAME, 'YYYY-MM-DD HH24:MI:SS'))
+		FROM MMVIEW
+		WHERE GROUP_ID = #{group_id}
+		AND LENGTH(DATE_NAME) = 19)
+		AND TO_DATE(DATE_NAME, 'YYYY-MM-DD HH24:MI:SS') &lt; SYSDATE
+		ORDER BY PLAN_END_DATE
+	</select>
+	
+	<select id="earliestMomentProceed" resultType="com.test.prj.MomentDTO">
+		SELECT MOMENT_ID, MOMENT_NAME
+		FROM MMVIEW
+		WHERE GROUP_ID = #{group_id}
+		AND MOMENT_ID NOT IN (SELECT MOMENT_ID FROM MM_NONACTIVE)
+		AND LENGTH(DATE_NAME) = 19
+		AND TO_DATE(DATE_NAME, 'YYYY-MM-DD HH24:MI:SS') = (
+		SELECT MIN(TO_DATE(DATE_NAME, 'YYYY-MM-DD HH24:MI:SS'))
+		FROM MMVIEW
+		WHERE GROUP_ID = #{group_id}
+		AND LENGTH(DATE_NAME) = 19
+		AND TO_DATE(DATE_NAME, 'YYYY-MM-DD HH24:MI:SS') &gt; SYSDATE)
+		AND TO_DATE(DATE_NAME, 'YYYY-MM-DD HH24:MI:SS') &gt; SYSDATE
+		ORDER BY PLAN_END_DATE
+	</select>
+	
+	<select id="createdMomentLastweek" resultType="com.test.prj.MomentDTO">
+		SELECT MOMENT_ID, MOMENT_NAME
+		FROM MMVIEW
+		WHERE GROUP_ID = #{group_id}
+		AND MOMENT_ID NOT IN (SELECT MOMENT_ID FROM MM_NONACTIVE)
+		AND TO_DATE(CREATION_DATE, 'YYYY-MM-DD HH24:MI:SS') IN (
+		SELECT TO_DATE(CREATION_DATE, 'YYYY-MM-DD HH24:MI:SS')
+		FROM MMVIEW
+		WHERE GROUP_ID = #{group_id}
+		AND TO_DATE(CREATION_DATE, 'YYYY-MM-DD HH24:MI:SS') &gt; (SYSDATE - 7))
+		ORDER BY PLAN_END_DATE
+	</select>
+	
+	<select id="webUserMatchId" resultType="com.test.prj.GroupDTO">
+		SELECT H.ID AS MATCH_ID
+		FROM TBL_USER T
+		JOIN GR_MATCH H
+		ON T.ID = H.USER_ID
+		LEFT JOIN GR_PREINVITE P
+		ON H.ID = P.MEMBER_ID
+		LEFT JOIN GR_INVITE I
+		ON H.ID = I.RECEPTION_ID
+		LEFT JOIN GR_SIGNUP N
+		ON H.ID = N.MEMBER_ID
+		WHERE T.ID = #{user_id}
+		AND (P.SIGNUP_WHETHER_ID = 'SW01'
+		OR I.WHETHER_ID = 'SW01'
+		OR N.WHETHER_ID = 'SW01')
+  	</select>
+   
+   	<select id="checkAnnTitle" resultType="com.test.prj.AnnouncementDTO">
+		SELECT A.ID AS ID, A.TITLE AS TITLE
+		FROM GR_ANNOUNCEMENT A
+		JOIN GR_MANAGER M
+		ON A.MANAGER_ID = M.ID
+		JOIN GR_MATCH H
+		ON M.MATCH_ID = H.ID
+		JOIN TBL_GROUP G
+		ON H.GROUP_ID = G.ID
+		WHERE G.ID = #{group_id}
+   	</select>
+   	
+   	<select id="checkAnnContent" resultType="java.lang.String">
+		SELECT A.CONTENT AS CONTENT
+		FROM GR_ANNOUNCEMENT A
+		JOIN GR_MANAGER M
+		ON A.MANAGER_ID = M.ID
+		JOIN GR_MATCH H
+		ON M.MATCH_ID = H.ID
+		JOIN TBL_GROUP G
+		ON H.GROUP_ID = G.ID
+		WHERE G.ID = #{group_id}
+		AND A.ID = #{ann_id}
+   	</select>
+   	
+   	<select id="checkMomentDNP" resultType="com.test.prj.GroupMomentDTO">
+		SELECT DATE_NAME, MOMENT_NAME, PLACE_NAME
+		FROM MMVIEW
+		WHERE PHASE_ID = 'MH03'
+		AND GROUP_ID = 'GR01'
+		AND MOMENT_ID NOT IN (SELECT MOMENT_ID
+		FROM MM_NONACTIVE)
+   	</select>
+   	
+   	<select id="momentNameCount" resultType="int">
+		SELECT COUNT(*) AS COUNT
+		FROM MMVIEW
+		WHERE GROUP_ID = #{group_id}
+		AND MOMENT_ID NOT IN (SELECT MOMENT_ID
+		FROM MM_NONACTIVE)
+		AND MOMENT_NAME = #{name}
+		ORDER BY PLAN_END_DATE
+	</select>
+      
+  	<select id="searchMomentResult" resultType="com.test.prj.MomentDTO">
+		SELECT MOMENT_ID, MOMENT_NAME, GROUP_ID, GROUP_NAME
+		, PHASE_ID, PHASE
+		, DATE_ID, DATE_NAME, PLACE_ID, PLACE_NAME
+		, PARTI_NUM, MIN_PARTICIPANT, MAX_PARTICIPANT
+		, CREATION_DATE, PLAN_END_DATE, NOTE, END_TIME
+		FROM MMVIEW
+		WHERE GROUP_ID = #{group_id}
+		AND MOMENT_ID NOT IN (SELECT MOMENT_ID FROM MM_NONACTIVE)
+		AND MOMENT_NAME = #{name}
+		ORDER BY PLAN_END_DATE
+  	</select>
+  	
+  	<select id="creationGroupId" resultType="String">
+		SELECT T.ID
+		FROM
+		(
+		SELECT C.ID, C.USER_ID, C.NAME, C.INTRODUCTION, C.ROOT,
+		C.CREATION_DATE, COUNT(*) AS COUNT, C.CREATION_DATE + 7 AS END_DATE
+		FROM GR_CREATION C LEFT JOIN GR_PREINVITE P
+		ON C.ID = P.CREATE_ID
+		WHERE P.SIGNUP_WHETHER_ID = 'SW01'
+		AND USER_ID = #{user_id}
+		GROUP BY
+		C.ID, C.USER_ID, C.NAME, C.INTRODUCTION, C.ROOT, C.CREATION_DATE,
+		P.CREATE_ID
+		) T
+		WHERE END_DATE > SYSDATE
+		AND COUNT &lt; 5
+  	</select>
+  	
+  	<select id="groupConstructor" resultType="com.test.prj.GroupDTO">
+	    SELECT MATCH_ID, CREATE_ID AS CREATION_ID
+	    FROM GR_CONSTRUCTORVIEW
+	    WHERE USER_ID = #{user_id}
+	    AND CREATE_ID = #{creation_id}
+	    AND ROWNUM = 1
+   	</select>
+   	
+   	<select id="creationGroupIdmatch" resultType="String">
+		SELECT CREATE_ID
+		FROM GR_PREINVITE
+		WHERE MEMBER_ID = #{outgoing_id}
+   	</select>
+   	
+   	<select id="nextGRId" resultType="String">
+        SELECT 'GR0' || TO_CHAR(MAX(TO_NUMBER(SUBSTR(ID, 3,4)))+1)  AS MAXID
+        FROM TBL_GROUP
+  	</select>
+   
+  	<select id="creationGroupMemberCount" resultType="int">
+		SELECT COUNT(*) AS COUNT
+		FROM GR_PREINVITE
+		WHERE CREATE_ID = #{creation_id}
+		AND SIGNUP_WHETHER_ID = 'SW01'
+ 	</select>
+   
+   	<select id="creationIdArr" resultType="com.test.prj.GroupDTO">
+		SELECT CREATION_ID
+		FROM TBL_GROUP
+   	</select>
+   
+   	<select id="inviteRefuseCount" resultType="int">
+		SELECT COUNT(*) AS COUNT
+		FROM GR_INVITE I JOIN GR_MATCH M
+		ON M.ID = I.RECEPTION_ID
+		WHERE I.WHETHER_ID = 'SW02'
+		AND M.USER_ID = #{user_id}
+		AND I.GROUP_ID = #{group_id}
+   	</select>
+   
+  	<select id="preInviteResponseCount" resultType="int">
+		SELECT COUNT(*) AS COUNT
+		FROM GR_PREINVITE P JOIN GR_MATCH M
+		ON P.MEMBER_ID = M.ID
+		WHERE TYPE_ID = 'GJ01'
+		AND USER_ID = #{user_id}
+		AND CREATE_ID = #{creation_id}
+  	</select>
+   
+  	<select id="searchGroupId" resultType="String">
+		SELECT ID
+		FROM TBL_GROUP
+		WHERE CREATION_ID = #{creation_id}
+  	</select>
+   
+   	<select id="signupAnswers" resultType="com.test.prj.GroupDTO">
+		SELECT ID, QUESTION, ANSWER, SIGNUP_ID, ANSWER_DATE, NAME, GROUP_ID
+		FROM SIGNUPANSWERVIEW
+		WHERE GROUP_ID = #{group_id}
+   	</select>
+   
+   	<update id="groupIdUpdate">
+		UPDATE GR_MATCH
+		SET GROUP_ID = #{group_id}
+		WHERE ID = ANY(SELECT MEMBER_ID
+		FROM GR_PREINVITE
+		WHERE CREATE_ID = (SELECT CREATION_ID
+		FROM TBL_GROUP
+		WHERE ID = #{group_id}))
+   	</update>
+   	
+   	<insert id="groupAdd">
+   		INSERT INTO TBL_GROUP(ID, CREATION_ID, OPEN_DATE) VALUES(#{group_id}, #{creation_id}, SYSDATE)
+   	</insert>
+	
+   	<insert id="preinviteAdd">
+		INSERT INTO GR_PREINVITE(ID, MEMBER_ID, CREATE_ID, ACCEPTION_DATE, SIGNUP_WHETHER_ID, ALARM_CHECK_DATE)
+		VALUES(#{id}, #{reception_id}, #{create_id}, SYSDATE, #{whether_id}, NULL)
+   	</insert>
+   
+   	<insert id="inviteAdd">
+		INSERT INTO GR_INVITE(ID, RECEPTION_ID, OUTGOING_ID, GROUP_ID, ACCEPTION_DATE, WHETHER_ID, ALARM_CHECK_DATE)
+		VALUES(#{id}, #{reception_id}, #{outgoing_id}, #{group_id}, SYSDATE, #{whether_id}, NULL)
+   	</insert>
+   	
+   	<select id="searchGroupName" resultType="java.lang.String">
+   		SELECT C.NAME
+   		FROM TBL_GROUP G
+   		JOIN GR_CREATION C
+   		ON G.CREATION_ID = C.ID
+   		WHERE G.ID = #{group_id}
+   	</select>
+
+
+</mapper>
+

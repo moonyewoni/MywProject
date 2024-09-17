@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+ "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.test.prj.IManagerDAO">
+
+	<select id="searchId" resultType="com.test.prj.GroupMemberDTO">
+		SELECT H.ID AS MATCH_ID
+		FROM TBL_USER T
+		JOIN GR_MATCH H
+		ON T.ID = H.USER_ID
+		LEFT JOIN GR_PREINVITE P
+		ON H.ID = P.MEMBER_ID
+		LEFT JOIN GR_INVITE I
+		ON H.ID = I.RECEPTION_ID
+		LEFT JOIN GR_SIGNUP N
+		ON H.ID = N.MEMBER_ID
+		WHERE T.ID = #{user_id}
+		AND H.GROUP_ID = #{group_id}
+		AND (P.SIGNUP_WHETHER_ID = 'SW01'
+		OR I.WHETHER_ID = 'SW01'
+		OR N.WHETHER_ID = 'SW01')
+	</select>
+	
+	<select id="managerCount" resultType="java.lang.Integer">
+		SELECT COUNT(H.ID) AS COUNT
+		FROM GR_MATCH H
+		RIGHT JOIN GR_MANAGER R
+		ON H.ID = R.MATCH_ID
+		LEFT JOIN GR_PREINVITE P
+		ON H.ID = P.MEMBER_ID
+		LEFT JOIN GR_INVITE I
+		ON H.ID = I.RECEPTION_ID
+		LEFT JOIN GR_SIGNUP N
+		ON H.ID = N.MEMBER_ID
+		WHERE H.GROUP_ID = #{group_id}
+		AND (P.SIGNUP_WHETHER_ID = 'SW01'
+		OR I.WHETHER_ID = 'SW01'
+		OR N.WHETHER_ID = 'SW01')
+	</select>	
+
+	<select id="managerList" resultType="com.test.prj.GroupMemberDTO">
+		SELECT I.NAME AS NAME, H.ID AS MATCH_ID
+		FROM GR_MANAGER R
+		LEFT JOIN GR_MATCH H
+		ON R.MATCH_ID = H.ID
+		LEFT JOIN GR_PREINVITE P
+		ON H.ID = P.MEMBER_ID
+		LEFT JOIN GR_INVITE I
+		ON H.ID = I.RECEPTION_ID
+		LEFT JOIN GR_SIGNUP N
+		ON H.ID = N.MEMBER_ID
+		JOIN TBL_USER U
+		ON H.USER_ID = U.ID
+		JOIN US_INFORMATION I
+		ON U.ID = I.USER_ID
+		WHERE H.GROUP_ID = #{group_id}
+		AND (P.SIGNUP_WHETHER_ID = 'SW01'
+		OR I.WHETHER_ID = 'SW01'
+		OR N.WHETHER_ID = 'SW01')
+		ORDER BY I.NAME
+	</select>
+
+	<select id="voteList" resultType="com.test.prj.GroupMemberDTO">
+		SELECT I.NAME AS NAME, H.ID AS MATCH_ID
+		FROM GR_MANAGER R
+		RIGHT JOIN GR_MATCH H
+		ON R.MATCH_ID = H.ID
+		LEFT JOIN GR_PREINVITE P
+		ON H.ID = P.MEMBER_ID
+		LEFT JOIN GR_INVITE I
+		ON H.ID = I.RECEPTION_ID
+		LEFT JOIN GR_SIGNUP N
+		ON H.ID = N.MEMBER_ID
+		JOIN TBL_USER U
+		ON H.USER_ID = U.ID
+		JOIN US_INFORMATION I
+		ON U.ID = I.USER_ID
+		WHERE R.MATCH_ID IS NULL
+		AND H.GROUP_ID = #{group_id}
+		AND (P.SIGNUP_WHETHER_ID = 'SW01'
+		OR I.WHETHER_ID = 'SW01'
+		OR N.WHETHER_ID = 'SW01')
+		ORDER BY I.NAME
+	</select>
+	
+	<select id="searchSelectedId" resultType="java.lang.String">
+		SELECT E.ID AS SELECTED_ID
+		FROM GR_MATCH H
+		RIGHT JOIN GR_MANAGER_VOTEE E
+		ON H.ID = E.VOTEE_ID
+		JOIN GR_MANAGER_VOTE V
+		ON E.VOTE_ID = V.ID
+		WHERE H.GROUP_ID = #{group_id}
+		AND H.ID = #{selectedMatch_id}
+		AND V.ID = #{gmvote_id}
+	</select>
+   
+   	<select id="checkEndDate" resultType="java.lang.String">
+		SELECT END_DATE
+		FROM
+		(
+		SELECT END_DATE
+		FROM GR_MANAGER_VOTE
+		WHERE GROUP_ID = #{group_id}
+		ORDER BY END_DATE DESC
+		)
+		WHERE ROWNUM = 1
+   	</select>
+   	
+   	<select id="checkVoteId" resultType="java.lang.String">
+		SELECT ID
+		FROM
+		(
+		SELECT ID
+		FROM GR_MANAGER_VOTE
+		WHERE GROUP_ID = #{group_id}
+		ORDER BY ID DESC
+		)
+		WHERE ROWNUM = 1
+   	</select>
+   	
+   	<select id="voterList" resultType="com.test.prj.ManagerVoterDTO">
+		SELECT VOTER_ID
+		FROM GR_MANAGER_VOTER
+		WHERE VOTE_ID = #{vote_id}
+   	</select>
+   	
+   	<select id="voterCount" resultType="java.lang.Integer">
+		SELECT COUNT(VOTER_ID)
+		FROM GR_MANAGER_VOTER
+		WHERE VOTE_ID = #{vote_id}
+   	</select>
+   	
+   	<select id="maxCountSelect" resultType="String">
+		SELECT SELECTED_ID
+		FROM
+		(
+		SELECT SELECTED_ID,
+		COUNT(*) AS VOTE_COUNT,
+		MAX(VOTER_DATE) AS LAST_VOTE_DATE,
+		RANK() OVER (ORDER BY COUNT(*) DESC, MAX(VOTER_DATE) ASC) AS RN
+		FROM GR_MANAGER_VOTER
+		WHERE VOTE_ID = #{group_id}
+		GROUP BY SELECTED_ID
+		)
+		WHERE RN = 1
+   </select>
+	
+	
+	<insert id="voteAdd">
+		INSERT INTO GR_MANAGER_VOTE(ID, GROUP_ID, START_DATE, END_DATE)
+		VALUES(#{id}, #{group_id}, SYSDATE, SYSDATE + INTERVAL '1' DAY)
+	</insert>
+	
+	<insert id="voteeAdd">
+		INSERT INTO GR_MANAGER_VOTEE(ID, VOTE_ID, VOTEE_ID, ALARM_OUTGOING_DATE)
+		VALUES(#{id}, #{vote_id}, #{votee_id}, SYSDATE)
+	</insert>
+
+	<insert id="voterAdd">
+		INSERT INTO GR_MANAGER_VOTER(ID, VOTE_ID, VOTER_ID, SELECTED_ID, VOTER_DATE)
+ 		VALUES(#{id}, #{vote_id}, #{voter_id}, #{selected_id}, SYSDATE)
+	</insert>
+	
+	<insert id="managerAdd">
+		INSERT INTO GR_MANAGER(ID, MATCH_ID, RECEIVE_POWER_DATE)
+		VALUES(#{id}, #{selectee_id}, SYSDATE)
+   	</insert>
+   	
+	<select id="nextVoteId" resultType="String">
+        SELECT 'MV0' || TO_CHAR(MAX(TO_NUMBER(SUBSTR(ID, 3,4)))+1) AS MAXID
+     	FROM GR_MANAGER_VOTE
+  	</select>
+  	
+  	<select id="nextVoteeId" resultType="String">
+  		SELECT 'VE0' || TO_CHAR(MAX(TO_NUMBER(SUBSTR(ID, 3,4)))+1) AS MAXID
+     	FROM GR_MANAGER_VOTEE
+  	</select>
+  	
+  	<select id="nextVoterId" resultType="String">
+  		SELECT 'VR0' || TO_CHAR(MAX(TO_NUMBER(SUBSTR(ID, 3,4)))+1) AS MAXID
+     	FROM GR_MANAGER_VOTER
+  	</select>
+	
+	<select id="nextManagerId" resultType="String">
+		SELECT 'MR0' || TO_CHAR(MAX(TO_NUMBER(SUBSTR(ID, 3,4)))+1) AS MAXID
+     	FROM GR_MANAGER
+	</select>
+</mapper>

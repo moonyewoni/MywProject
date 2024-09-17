@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+ "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.test.prj.IPersonalDAO">
+
+	<select id="findInfo" resultType="com.test.prj.MemberDTO">
+		SELECT NAME AS USER_NAME, BIRTH_DATE
+		FROM US_INFORMATIONVIEW
+		WHERE USER_ID = #{user_id}
+	</select>
+	
+	
+	<select id="findGroup" resultType="com.test.prj.GroupDTO">
+		
+		SELECT GM.USER_ID, GM.GROUP_ID, GC.NAME, GC.INTRODUCTION ,GC.ROOT
+		, TO_CHAR(GC.CREATION_DATE, 'YYYY-MM-DD') AS CREATION_DATE
+		 , (SELECT COUNT(*)
+       		FROM GR_MATCH
+       		WHERE GROUP_ID= G.ID) AS COUNT
+		FROM GR_MATCH GM JOIN TBL_GROUP G
+     	ON GM.GROUP_ID = G.ID
+     	JOIN GR_CREATION GC
+     	ON G.CREATION_ID = GC.ID
+		WHERE GM.USER_ID = #{user_id}
+	</select>
+	
+	<select id="findMoment" resultType="com.test.prj.MomentDTO">
+		SELECT DISTINCT(MMV.MOMENT_ID), MMV.MOMENT_NAME
+		, MMV.GROUP_ID, MMV.GROUP_NAME
+        , MMV.PHASE_ID , MMV.PHASE
+        , MMV.DATE_NAME, MMV.PLACE_NAME
+		FROM MMVIEW MMV RIGHT JOIN MM_PARTICIPANT MT
+        ON MMV.MOMENT_ID = MT.MOMENT_ID
+		WHERE MT.MEMBER_ID IN ( SELECT ID
+                               FROM GR_MATCH
+                               WHERE USER_ID = #{user_id})
+          AND MT.ID NOT IN (SELECT QITER_ID
+                            FROM MM_QUIT)
+          AND MMV.MOMENT_ID NOT IN (SELECT MOMENT_ID
+                   	 				FROM MM_NONACTIVE)
+	</select>
+	
+	<select id="findRecent" resultType="com.test.prj.MomentDTO">
+		
+		SELECT *
+		FROM(
+		SELECT DISTINCT(MMV.MOMENT_ID), MMV.MOMENT_NAME
+				, MMV.GROUP_ID, MMV.GROUP_NAME
+        		, MMV.PHASE_ID , MMV.PHASE
+        		, MMV.DATE_NAME
+		FROM MMVIEW MMV RIGHT JOIN MM_PARTICIPANT MT
+        ON MMV.MOMENT_ID = MT.MOMENT_ID
+		WHERE MT.MEMBER_ID IN ( SELECT ID
+                               FROM GR_MATCH
+                               WHERE USER_ID = #{user_id})
+            AND MT.ID NOT IN (SELECT QITER_ID
+                            FROM MM_QUIT)
+            AND MMV.MOMENT_ID NOT IN (SELECT MOMENT_ID
+                                        FROM MM_NONACTIVE)
+            AND MMV.PHASE_ID='MH03'
+            AND TO_DATE(MMV.DATE_NAME, 'YYYY-MM-DD HH24:MI:SS') &lt;=  SYSDATE
+        ORDER BY TO_DATE(MMV.DATE_NAME, 'YYYY-MM-DD HH24:MI:SS') DESC
+		)
+		WHERE ROWNUM = 1
+		
+	</select>
+	
+	<select id="findNext" resultType="com.test.prj.MomentDTO">
+		
+		SELECT *
+		FROM(
+		SELECT DISTINCT(MMV.MOMENT_ID), MMV.MOMENT_NAME
+				, MMV.GROUP_ID, MMV.GROUP_NAME
+        		, MMV.PHASE_ID , MMV.PHASE
+        		, MMV.DATE_NAME
+		FROM MMVIEW MMV RIGHT JOIN MM_PARTICIPANT MT
+        ON MMV.MOMENT_ID = MT.MOMENT_ID
+		WHERE MT.MEMBER_ID IN ( SELECT ID
+                               FROM GR_MATCH
+                               WHERE USER_ID = #{user_id})
+            AND MT.ID NOT IN (SELECT QITER_ID
+                            FROM MM_QUIT)
+            AND MMV.MOMENT_ID NOT IN (SELECT MOMENT_ID
+                                        FROM MM_NONACTIVE)
+            AND MMV.PHASE_ID='MH03'
+            AND TO_DATE(MMV.DATE_NAME, 'YYYY-MM-DD HH24:MI:SS') &gt;=  SYSDATE
+        ORDER BY TO_DATE(MMV.DATE_NAME, 'YYYY-MM-DD HH24:MI:SS') ASC
+		)
+		WHERE ROWNUM = 1
+		
+	</select>
+	
+	<select id="findBuilding" resultType="com.test.prj.MomentDTO">
+		
+		SELECT DISTINCT(MMV.MOMENT_ID), MMV.MOMENT_NAME
+				, MMV.GROUP_ID, MMV.GROUP_NAME
+        		, MMV.PHASE_ID , MMV.PHASE
+        		, MMV.DATE_NAME
+		FROM MMVIEW MMV RIGHT JOIN MM_PARTICIPANT MT
+        ON MMV.MOMENT_ID = MT.MOMENT_ID
+		WHERE MT.MEMBER_ID IN ( SELECT ID
+                               FROM GR_MATCH
+                               WHERE USER_ID = #{user_id})
+            AND MT.ID NOT IN (SELECT QITER_ID
+                            FROM MM_QUIT)
+            AND MMV.MOMENT_ID NOT IN (SELECT MOMENT_ID
+                                        FROM MM_NONACTIVE)
+            AND MMV.PHASE_ID='MH02'
+		
+	</select>
+	
+	<select id="findSummary" resultType="com.test.prj.MomentDTO">
+		
+		SELECT DISTINCT(MMV.MOMENT_ID), MMV.MOMENT_NAME
+				, MMV.GROUP_ID, MMV.GROUP_NAME
+        		, MMV.PHASE_ID , MMV.PHASE
+        		, MMV.DATE_NAME, MMV.PLACE_NAME
+		FROM MMVIEW MMV RIGHT JOIN MM_PARTICIPANT MT
+        ON MMV.MOMENT_ID = MT.MOMENT_ID
+		WHERE MT.MEMBER_ID IN ( SELECT ID
+                               FROM GR_MATCH
+                               WHERE USER_ID = #{user_id})
+            AND MT.ID NOT IN (SELECT QITER_ID
+                            FROM MM_QUIT)
+            AND MMV.MOMENT_ID NOT IN (SELECT MOMENT_ID
+                                        FROM MM_NONACTIVE)
+            AND MMV.PHASE_ID='MH03'
+            AND TO_DATE(MMV.DATE_NAME, 'YYYY-MM-DD HH24:MI:SS') &gt;=  SYSDATE
+        ORDER BY TO_DATE(MMV.DATE_NAME, 'YYYY-MM-DD HH24:MI:SS') ASC
+		
+	</select>
+</mapper>

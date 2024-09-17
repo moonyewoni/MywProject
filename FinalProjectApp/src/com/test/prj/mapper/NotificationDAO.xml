@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+ "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.test.prj.INotificationDAO">
+
+	<select id="findPreInviteNoti"
+		resultType="com.test.prj.NotificationDTO">
+		SELECT PI.ID
+		, (SELECT NAME
+		FROM US_INFORMATION
+		WHERE USER_ID = M.USER_ID) AS USER_NAME
+		, PI.ACCEPTION_DATE AS NOTI_DATE
+		, C.NAME AS GROUP_NAME
+		FROM GR_PREINVITE PI JOIN GR_CREATION C
+		ON PI.CREATE_ID = C.ID
+		JOIN GR_MATCH M
+		ON PI.MEMBER_ID = M.ID
+		WHERE ALARM_CHECK_DATE IS NULL 
+		AND C.USER_ID = #{user_id}
+		ORDER BY ACCEPTION_DATE
+	</select>
+
+
+	<update id="deletepreInviteNoti">
+		UPDATE GR_PREINVITE
+		SET ALARM_CHECK_DATE = SYSDATE
+		WHERE ID = #{del_id}
+	</update>
+</mapper>

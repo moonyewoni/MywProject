@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+ "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.test.prj.IMemberDAO">
+
+	<select id="findList" resultType="com.test.prj.MemberDTO">
+		SELECT ID AS FIND_ID, QUESTION
+		FROM FIND
+		ORDER BY ID
+	</select>
+	
+	<!-- DB 내에 사용자가 입력한 아이디와 같은 아이디가 존재하는지 확인 -->
+	<select id="idCount" resultType="java.lang.Integer">
+		SELECT COUNT(*) AS COUNT
+		FROM US_INFORMATION
+		WHERE MY_ID = #{my_id}
+	</select>
+	
+	<select id="nameCount" resultType="java.lang.Integer">
+		SELECT COUNT(*) AS COUNT
+		FROM US_INFORMATION
+		WHERE NAME = #{user_name}
+	</select>
+	
+	<select id="userCount" resultType="java.lang.Integer">
+		SELECT COUNT(*) AS COUNT
+		FROM TBL_USER	
+	</select>
+	
+	<insert id="addUser">
+		INSERT INTO TBL_USER(ID) VALUES(#{user_id})
+	</insert>
+	
+	<insert id="addUserInformation">
+		INSERT INTO US_INFORMATION(ID, USER_ID, MY_ID, PW, BIRTH_DATE, GENDER_ID, FIND_ID, ANSWER, NAME, SIGNUP_DATE)
+		VALUES('UI0' || USINFORMATIONSEQ.NEXTVAL, #{user_id}, #{my_id}, #{pw}, TO_DATE(#{birth_date}, 'YYYY-MM-DD')
+     	     , #{gender_id}, #{find_id}, #{answer}, #{user_name}, SYSDATE)
+	</insert>
+	
+
+</mapper>
